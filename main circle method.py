@@ -525,57 +525,64 @@ def getMarkerOfType(markerType):
 
 
 def updatePosition(force=True):  # Magic, but modified to make it easier to read and put all in one loop
-	cameraAngleArray = [0, 0, 45, -45, -89, 89]
-	mNumber = 0
-	loopNumber = 0
-	while mNumber <= 0 and loopNumber<6:
-		turnCameraServo(cameraAngleArray[loopNumber])
+	#cameraAngleArray = [0, 0, 45, -45, -89, 89]
+	#mNumber = 0
+	#loopNumber = 0
+	#while mNumber <= 0 and loopNumber<6:
+		#turnCameraServo(cameraAngleArray[loopNumber])
 
-		time.sleep(0.5)
-
-
-		visionTable = sorted(r.camera.see(), key=lambda x: abs(x.spherical.distance_metres))
-
-		mNumber = 0
-		totalPos = Vector(0, 0)
-		totalFacing = 0
-
-		for m in visionTable:
-			marker = markers[m.id]
-			if marker != False and marker.markerType == (WALL or COLUMN):
-				rotation = pi * m.spherical.rot_y_degrees / 180
-				offset = Vector(sin(-rotation + marker.normal),
-								cos(-rotation + marker.normal))
-
-				# offset *= m.centre.polar.length
-				offset *= m.spherical.distance_metres
-
-				mNumber += 1
-				totalPos += marker.position - offset
+		#time.sleep(0.5)
 
 
-				global robotFacing
-				robotFacing = (-m.spherical.rot_y_degrees - m.pixel_centre[1] + marker.normalDeg + -robot.cameraAngle) % 360
+		#visionTable = sorted(r.camera.see(), key=lambda x: abs(x.spherical.distance_metres))
 
-				robot.facing = robotFacing
+		#mNumber = 0
+		#totalPos = Vector(0, 0)
+		#totalFacing = 0
 
-				totalFacing += robotFacing
+		#for m in visionTable:
+			#marker = markers[m.id]
+			#if marker != False and marker.markerType == (WALL or COLUMN):
+				#rotation = pi * m.spherical.rot_y_degrees / 180
+				#offset = Vector(sin(-rotation + marker.normal),
+								#cos(-rotation + marker.normal))
+
+				## offset *= m.centre.polar.length
+				#offset *= m.spherical.distance_metres
+
+				#mNumber += 1
+				#totalPos += marker.position - offset
 
 
-		updateTokenLocations(visionTable=visionTable)
+				#global robotFacing
+				#robotFacing = (-m.spherical.rot_y_degrees - m.pixel_centre[1] + marker.normalDeg + -robot.cameraAngle) % 360
+
+				#robot.facing = robotFacing
+
+				#totalFacing += robotFacing
 
 
-		# lockedSleep(0.5)
+		#updateTokenLocations(visionTable=visionTable)
 
-		loopNumber += 1
-		if mNumber > 0:
-			global robotPosition
-			robotPosition = totalPos / mNumber
-			robot.position = totalPos / mNumber
-			# turnCameraServo(0)
-			return True
 
-	turnCameraServo(0)
+		## lockedSleep(0.5)
+
+		#loopNumber += 1
+		#if mNumber > 0:
+			#global robotPosition
+			#robotPosition = totalPos / mNumber
+			#robot.position = totalPos / mNumber
+			## turnCameraServo(0)
+			#return True
+
+	#turnCameraServo(0)
+	vision_table = get_vision_table()
+	wall_marker_table = [m for m in vision_table if m.is_wall_marker]
+	if (len(wall_marker_table)>=2):
+		robot.position = (circle_coord() + algebraic_coord())/2
+		return True
+	
+	
 	if force:
 		turnByAngle(40, 180)
 		return updatePosition()
@@ -686,7 +693,7 @@ def find_corner(arena = 0):
 			find_corner(arena)
 			return False
 
-def find_coord(markers):
+def circle_coord(markers):
     vision_table_full = get_vision_table()
     vision_table = [m for m in vision_table_full if m.is_wall_marker]
     if (len(vision_table)>=2):
@@ -727,14 +734,54 @@ def find_coord(markers):
         xs2 = xm - h*dy/d
         ys1 = ym - h*dx/d
         ys2 = ym + h*dx/d
-
-        print(V(xs1,ys1))
-        print(V(xs2,ys2))
+        
+        if xs1 > 0 and xs1 < 8 and ys1 > 0 and ys1 < 8:
+            return Vector(xs1,ys1)
+        elif xs2 > 0 and xs2 < 8 and ys2 > 0 and ys2 < 8:
+            return Vector(xs2,ys2)
 
     else:
         return False
             
+ def algebraic_coord():
+    visionTable = get_vision_table()
+    print("Vision Table:")
+    print(visionTable)
+    markerList=[]
+    
+    for m in visionTable:
+        marker = markers[m.id]
+        if marker != False and (marker.markerType == WALL):
+            markerList.append(m)
+    if len(markerList)>1:
+        marker1 = markers[markerList[0].id]
+        marker2 = markers[markerList[1].id]
+        xm1 = marker1.position.xVal()
+        xm2 = marker2.position.xVal()
+        ym1 = marker1.position.yVal()
+        ym2 = marker2.position.yVal()
+        m1x = markerList[0].cartesian.x
+        m2x = markerList[1].cartesian.x
+        m1y = markerList[0].cartesian.z
+        m2y = markerList[1].cartesian.z
             
+        
+        
+        a = markerList[0].cartesian.x - markerList[1].cartesian.x
+        b = markerList[1].cartesian.z - markerList[0].cartesian.z
+        c = marker1.position.xVal() - marker2.position.xVal()
+        
+        theta = acos(c/sqrt(a**2 + b**2)) + atan2(b,a)
+        
+        robotX = xm1 - m1x*cos(theta) + m1y*sin(theta)
+        robotY = ym1 - m1x*sin(theta) - m1y*cos(theta)
+        
+        return Vector(robotX,robotY)
+        #robot.position = Vector(robotX,robotY)
+        #print("Robot coordinates")
+        #print(robot.position)
+    else:
+        return False          
                  
         
  # Running
@@ -902,13 +949,7 @@ def main():  # Just for testing really, in game just run playGame()
 
 main()
 	
-	
-
-
-		
-	
-		
-
 
 # TODO fix motors, test marker detection and location,...
+
 
