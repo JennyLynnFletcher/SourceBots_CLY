@@ -686,16 +686,26 @@ def find_corner(arena = 0):
 			find_corner(arena)
 			return False
 
-def find_coord():
+def find_coord(markers):
     vision_table_full = get_vision_table()
-    vision_table = [m for m in vision_table if m.is_wall_marker]
+    vision_table = [m for m in vision_table_full if m.is_wall_marker]
     if (len(vision_table)>=2):
-        x1 = vision_table[0].cartesian.x
-        y1 = vision_table[0].cartesian.y
-        x2 = vision_table[1].cartesian.x
-        y2 = vision_table[1].cartesian.y
-        r1 = sqrt(x1**2 + y1**2)
-        r2 = sqrt(x2**2 + y2**2)
+        vec_x1 = vision_table[0].cartesian.x
+        vec_y1 = vision_table[0].cartesian.z
+        vec_x2 = vision_table[1].cartesian.x
+        vec_y2 = vision_table[1].cartesian.z
+        
+        vec_to_1 = markers[vision_table[0].id]
+        vec_to_2 = markers[vision_table[1].id]
+        
+        x1 = vec_to_1.position.xVal()
+        y1 = vec_to_1.position.yVal()
+        x2 = vec_to_2.position.xVal()
+        y2 = vec_to_2.position.yVal()
+        
+                
+        r1 = sqrt(vec_x1**2 + vec_y1**2)
+        r2 = sqrt(vec_x2**2 + vec_y2**2)
         
         #d = sqrt((x1-x2)**2 + (y1-y2)**2)
         #l = (r1**2 - r2**2 + d**2)
@@ -734,6 +744,10 @@ def find_coord():
 def initMarkers():
 	# Setup markers
 	markerCodeTemp = 0
+	
+	for i in range(1, 7):  # Left
+		markers.append(Marker(Vector(0, i), WALL, markerCodeTemp, norm=1.5 * pi))
+		markerCodeTemp += 1
 
 	for i in range(1, 8):  # Top markers
 		markers.append(Marker(Vector(i, 8), WALL, markerCodeTemp))
@@ -747,9 +761,6 @@ def initMarkers():
 		markers.append(Marker(Vector(i, 0), WALL, markerCodeTemp, norm=1 * pi))
 		markerCodeTemp += 1
 		
-	for i in range(1, 7):  # Left
-		markers.append(Marker(Vector(0, i), WALL, markerCodeTemp, norm=1.5 * pi))
-		markerCodeTemp += 1
 
 	
 
@@ -887,7 +898,7 @@ def main():  # Just for testing really, in game just run playGame()
 	#while corner == False:
 		#corner = find_corner(2)
 	while True:
-		print(find_coord())
+		print(find_coord(markers))
 
 main()
 	
@@ -900,5 +911,4 @@ main()
 
 
 # TODO fix motors, test marker detection and location,...
- 
- 
+
